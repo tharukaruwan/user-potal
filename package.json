@@ -1,0 +1,29 @@
+{
+  "name": "user-potal-persistance-networks",
+  "version": "1.0.0",
+  "description": "REST API template Nodejs with express framework (Json web token, mongodb connection )",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon server.js"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "mongoose",
+    "jwt"
+  ],
+  "author": "Tharuka Ruwan",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^5.0.1",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^5.11.8",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
+  }
+}
