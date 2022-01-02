@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/user/user");
+const Tocken = require("../../models/tocken/tocken");
+var fs = require('fs');
 
 // signup
 exports.user_signup = (req, response, next) => {
@@ -70,6 +72,7 @@ exports.user_login = (req, response, next) => {
                         });
                     }
                     if (result) {
+                        let sessionID = new mongoose.Types.ObjectId();
                         const accesstocken = jwt.sign(
                             {
                                 email: user[0].email,
@@ -83,26 +86,48 @@ exports.user_login = (req, response, next) => {
                         const refreshtocken = jwt.sign(
                             {
                                 email: user[0].email,
-                                id: user[0]._id
+                                id: user[0]._id,
+                                sessionID: sessionID
                             },
                             process.env.JWT_REFRESH_KEY,
                             {
-                                expiresIn: process.env.ACCESSTOKENTTL
+                                expiresIn: process.env.REFRESHTOCKENTTL
                             }
                         );
-                        return response.status(200).json({
-                            message: "Login successful",
-                            accesstocken,
-                            refreshtocken,
-                            email: user[0].email,
-                            name: user[0].name,
-                            id: user[0]._id,
-                            profilepic: user[0].profilepic,
+
+                        const refreshTocken = new Tocken({
+                            _id: sessionID,
+                            userId: user[0]._id,
+                            refreshTocken: refreshtocken,
+                        });
+
+                        // Saving refresh tocken
+                        refreshTocken.save()
+                            .then(result => {
+                                console.log("Tocken Saved!")
+                                return response.status(200).json({
+                                    message: "Login successful",
+                                    accesstocken,
+                                    refreshtocken,
+                                    email: user[0].email,
+                                    name: user[0].name,
+                                    id: user[0]._id,
+                                    profilepic: user[0].profilepic,
+                                });
+                            })
+                            .catch(err => {
+                                console.log(err);
+                                response.status(500).json({
+                                    message: "Unknown error! Please try again",
+                                    error: err
+                                });
+                            });
+
+                    } else {
+                        response.status(401).json({
+                            message: "Email or password is incorrect"
                         });
                     }
-                    response.status(401).json({
-                        message: "Email or password is incorrect"
-                    });
                 });
             }
         });
@@ -137,12 +162,25 @@ exports.user_update = (req, res, next) => {
 
 // uplord profile pic
 exports.user_uplord_profilepic = (req, res, next) => {
+
+    if (req.file?.filename == null || req.file?.filename == undefined) {
+        return res.status(400).json({
+            code: 400,
+            message: 'profile pic Found!'
+        });
+    }
+    let profilePicPath = `http://localhost:${process.env.PORT || 3001}/api/users/profilepic/` + req.file?.filename
+
     const id = req.params.userId;
-    User.updateOne({ _id: id }, { $set: { profilepic: "profile picture url" } })
+
+    User.updateOne({ _id: id }, { $set: { profilepic: profilePicPath } })
         .exec()
         .then(result => {
             console.log(result);
-            res.status(200).json(result);
+            res.status(200).json({ 
+                message: "Profile picture has been updated!",
+                url: profilePicPath
+             });
         })
         .catch(err => {
             console.log(err);
@@ -150,6 +188,20 @@ exports.user_uplord_profilepic = (req, res, next) => {
                 error: err
             });
         });
+}
+
+// profile pic endpoint
+exports.user_get_profilepic = (req, res, next) => {
+
+    const fileStream = fs.createReadStream(`./profilepic/${req.params.filename}`);
+
+    fileStream.on("open", () => {
+        fileStream.pipe(res);
+    });
+
+    fileStream.on('error', () => {
+        res.end("err");
+    });
 }
 
 // change password 
